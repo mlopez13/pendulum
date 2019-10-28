@@ -4,13 +4,17 @@
 import java.awt.*;
 import java.awt.event.*;
 
+import java.text.DecimalFormat;
+
 class Pendulum extends Canvas implements Runnable {
+	
+	DecimalFormat myFormat = new DecimalFormat("0.00");
 	
 	// INSTANCE VARIABLES
 	// set damping = 0.5 for a damped pendulum
 	double damping = 0.5;
 	// set driveAmp = 0.5, driveFreq = 2.0/3.0 for a drived pendulum
-	double driveAmp = 0.5, driveFreq = 2.0/3.0;
+	double driveAmp, driveFreq = 2.0/3.0;
 	// amplitude of pendulum
 	double theta = 30*Math.PI/180;
 	
@@ -23,6 +27,69 @@ class Pendulum extends Canvas implements Runnable {
 	int L = 150;
 	// bob width
 	int bobW = 40;
+	
+	// CONTROL PANEL OBJECTS
+	// label
+	Label l1 = new Label("Driving force amplitude: 0.50");
+	
+	// scrollbar: driveAmp = [0.00, ..., 2.00] step = 0.01
+	int s1min = 0, s1max = 200, s1ini = 50, s1wid = 60;
+	double s1div = 100.0;
+	
+	Scrollbar s1 = new Scrollbar(Scrollbar.HORIZONTAL,
+		s1ini, s1wid, s1min, s1max + s1wid) {
+		public Dimension getPreferredSize() {
+			return new Dimension(100, 15);
+		}};
+	
+	// - - -
+	// - - -
+	// - - -
+	
+	// CONSTRUCTOR METHOD
+	Pendulum() {
+		
+		// setSize is a method of Canvas that is inherited by Pendulum
+		setSize(WIDTH, LENGTH);
+		setBackground(Color.white);
+		
+		Frame pictureFrame = new Frame("Driven, damped pendulum.");
+		
+		pictureFrame.addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				System.exit(0);
+			}
+		});
+		
+		// CANVAS PANEL
+		Panel canvasPanel = new Panel();
+		// "this" makes reference to the object Pendulum itself
+		canvasPanel.add(this);
+		pictureFrame.add(canvasPanel);
+		
+		// CONTROL PANEL
+		Panel controlPanel = new Panel();
+		controlPanel.add(l1);
+		
+		s1.addAdjustmentListener(new AdjustmentListener() {
+			public void adjustmentValueChanged(AdjustmentEvent e) {
+				l1.setText("Driving force amplitude: " +
+					myFormat.format(s1.getValue()/s1div));
+			}
+		});
+		
+		controlPanel.add(s1);
+		pictureFrame.add(controlPanel, BorderLayout.SOUTH);
+		
+		// FRAME PACKING
+		pictureFrame.pack();
+		pictureFrame.setVisible(true);
+		
+		// RUN SIMULATION!
+		// calling .start() on this thread calls the run method
+		Thread myThread = new Thread(this);
+		myThread.start();
+	}
 	
 	// - - -
 	// - - -
@@ -55,6 +122,10 @@ class Pendulum extends Canvas implements Runnable {
 		
 		// EULER-RICHARDSON ALGORITHM
 		while (true) {
+			
+			// update driveAmp from scrollbar:
+			driveAmp = s1.getValue()/s1div;
+			
 			// do 0.1/dt iterations before painting
 			for (int i = 0; i < 0.1/dt; i++) {
 				alpha = torque(theta, omega, t);
@@ -70,44 +141,18 @@ class Pendulum extends Canvas implements Runnable {
 				// Increment of time
 				t += dt;
 			}
+			
 			// now paint:
 			repaint();
 			// but slow down the calculations:
 			try {Thread.sleep(10);} catch (InterruptedException e) {}
+			
 		}
 	}
 	
 	// - - -
 	// - - -
 	// - - -
-	
-	// CONSTRUCTOR METHOD
-	Pendulum() {
-		// setSize is a method of Canvas that is inherited by Pendulum
-		setSize(WIDTH, LENGTH);
-		
-		Frame pictureFrame = new Frame("Driven, damped pendulum.");
-		
-		pictureFrame.addWindowListener(new WindowAdapter() {
-			public void windowClosing(WindowEvent e) {
-				System.exit(0);
-			}
-		});
-		
-		Panel canvasPanel = new Panel();
-		
-		// "this" makes reference to the object Pendulum itself
-		canvasPanel.add(this);
-		
-		pictureFrame.add(canvasPanel);
-		pictureFrame.pack();
-		pictureFrame.setVisible(true);
-		
-		// RUN SIMULATION!
-		// calling .start() on this thread calls the run method
-		Thread myThread = new Thread(this);
-		myThread.start();
-	}
 	
 	// PAINT METHOD
 	public void paint(Graphics g) {
@@ -118,6 +163,9 @@ class Pendulum extends Canvas implements Runnable {
 		g.fillOval(pivotX - pivotW/2, pivotY - pivotW/2, pivotW,
 			pivotW);
 		g.drawLine(pivotX, pivotY, bobX(theta), bobY(theta));
+		
+		// to avoid animation stuttering:
+		Toolkit.getDefaultToolkit().sync();
 	}
 	
 	// - - -
