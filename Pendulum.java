@@ -7,9 +7,7 @@ import java.awt.event.*;
 import java.text.DecimalFormat;
 
 class Pendulum extends Canvas implements Runnable {
-	
-	DecimalFormat myFormat = new DecimalFormat("0.00");
-	
+		
 	// INSTANCE VARIABLES
 	// set damping = 0.5 for a damped pendulum
 	double damping = 0.5;
@@ -42,6 +40,12 @@ class Pendulum extends Canvas implements Runnable {
 			return new Dimension(100, 15);
 		}};
 	
+	// NUMBER FORMATTING
+	DecimalFormat myFormat = new DecimalFormat("0.00");
+	
+	// RUNNING
+	boolean running = false;
+	
 	// - - -
 	// - - -
 	// - - -
@@ -69,8 +73,11 @@ class Pendulum extends Canvas implements Runnable {
 		
 		// CONTROL PANEL
 		Panel controlPanel = new Panel();
+		
+		// label
 		controlPanel.add(l1);
 		
+		// scrollbar
 		s1.addAdjustmentListener(new AdjustmentListener() {
 			public void adjustmentValueChanged(AdjustmentEvent e) {
 				l1.setText("Driving force amplitude: " +
@@ -79,6 +86,19 @@ class Pendulum extends Canvas implements Runnable {
 		});
 		
 		controlPanel.add(s1);
+		
+		// button
+		Button staStoButton = new Button("Start.");
+		
+		staStoButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				running = !running;
+				staStoButton.setLabel(running ? "Stop." : "Start.");
+			}
+		});
+		
+		controlPanel.add(staStoButton);
+		
 		pictureFrame.add(controlPanel, BorderLayout.SOUTH);
 		
 		// FRAME PACKING
@@ -123,28 +143,33 @@ class Pendulum extends Canvas implements Runnable {
 		// EULER-RICHARDSON ALGORITHM
 		while (true) {
 			
-			// update driveAmp from scrollbar:
-			driveAmp = s1.getValue()/s1div;
-			
-			// do 0.1/dt iterations before painting
-			for (int i = 0; i < 0.1/dt; i++) {
-				alpha = torque(theta, omega, t);
+			if (running) {
+
+				// update driveAmp from scrollbar:
+				driveAmp = s1.getValue()/s1div;
 				
-				// middle point (Richardson)
-				thetaMid = theta + omega*0.5*dt;
-				omegaMid = omega + alpha*0.5*dt;
-				alphaMid = torque(thetaMid, omegaMid, t+0.5*dt);
+				// do 0.1/dt iterations before painting
+				for (int i = 0; i < 0.1/dt; i++) {
+					alpha = torque(theta, omega, t);
+					
+					// middle point (Richardson)
+					thetaMid = theta + omega*0.5*dt;
+					omegaMid = omega + alpha*0.5*dt;
+					alphaMid = torque(thetaMid, omegaMid, t+0.5*dt);
+					
+					theta += omegaMid*dt;
+					omega += alphaMid*dt;
+					
+					// Increment of time
+					t += dt;
+				}
 				
-				theta += omegaMid*dt;
-				omega += alphaMid*dt;
-				
-				// Increment of time
-				t += dt;
+				// now paint:
+				repaint();
+
 			}
 			
-			// now paint:
-			repaint();
-			// but slow down the calculations:
+			// and slow down the calculations:
 			try {Thread.sleep(10);} catch (InterruptedException e) {}
 			
 		}
@@ -178,9 +203,11 @@ class Pendulum extends Canvas implements Runnable {
 		new Pendulum();
 		
 		// the calculations of the pendulum (and its infinite loop)
-		// are run in a separate thread (myThread), so other stuff can
-		// be done here:
-		System.out.println("Hello, world! Long thyme, no c.");
+		// are run in a separate thread (myThread), so any code below
+		// these lines will also be executed:
+		
+		System.out.println("Hello, world!");
+		
 	}
 	
 }
