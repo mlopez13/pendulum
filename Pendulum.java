@@ -1,19 +1,30 @@
 
 // PENDULUM MOTION with GRAPHICS
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Frame;
+import java.awt.Panel;
+import java.awt.Button;
 
-import java.text.DecimalFormat;
+import java.awt.GridLayout;
+
+import java.awt.Canvas;
+import java.awt.Graphics;
+import java.awt.Color;
+
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+import java.awt.BorderLayout;
+import java.awt.Toolkit;
 
 class Pendulum extends Canvas implements Runnable {
 		
 	// INSTANCE VARIABLES
-	// set damping = 0.5 for a damped pendulum
-	double damping = 0.5;
-	// set driveAmp = 0.5, driveFreq = 2.0/3.0 for a drived pendulum
-	double driveAmp, driveFreq = 2.0/3.0;
-	// amplitude of pendulum
+	double damping;
+	double driveAmp, driveFreq;
 	double theta = 30*Math.PI/180;
 	
 	// GRAPHICS PARAMETERS
@@ -27,23 +38,12 @@ class Pendulum extends Canvas implements Runnable {
 	int bobW = 40;
 	
 	// CONTROL PANEL OBJECTS
-	// label
-	Label l1 = new Label("Driving force amplitude: 0.50");
+	// labelscroll
+	LabelScroll dampingScroll = new LabelScroll("Damping constant: ", 0, 1, 0.01, 0.5);
+	LabelScroll driveAmpScroll = new LabelScroll("Drive amplitude constant: ", 0, 2, 0.02, 0.5);
+	LabelScroll driveFreqScroll = new LabelScroll("Drive frequency constant: ", 0, 1, 0.01, 2./3.);
 	
-	// scrollbar: driveAmp = [0.00, ..., 2.00] step = 0.01
-	int s1min = 0, s1max = 200, s1ini = 50, s1wid = 60;
-	double s1div = 100.0;
-	
-	Scrollbar s1 = new Scrollbar(Scrollbar.HORIZONTAL,
-		s1ini, s1wid, s1min, s1max + s1wid) {
-		public Dimension getPreferredSize() {
-			return new Dimension(100, 15);
-		}};
-	
-	// NUMBER FORMATTING
-	DecimalFormat myFormat = new DecimalFormat("0.00");
-	
-	// RUNNING
+	// RUNNING SWITCH
 	boolean running = false;
 	
 	// - - -
@@ -73,19 +73,11 @@ class Pendulum extends Canvas implements Runnable {
 		
 		// CONTROL PANEL
 		Panel controlPanel = new Panel();
+		controlPanel.setLayout(new GridLayout(0, 1));
 		
-		// label
-		controlPanel.add(l1);
-		
-		// scrollbar
-		s1.addAdjustmentListener(new AdjustmentListener() {
-			public void adjustmentValueChanged(AdjustmentEvent e) {
-				l1.setText("Driving force amplitude: " +
-					myFormat.format(s1.getValue()/s1div));
-			}
-		});
-		
-		controlPanel.add(s1);
+		controlPanel.add(dampingScroll);
+		controlPanel.add(driveAmpScroll);
+		controlPanel.add(driveFreqScroll);
 		
 		// button
 		Button staStoButton = new Button("Start.");
@@ -125,11 +117,9 @@ class Pendulum extends Canvas implements Runnable {
 		return LENGTH/2 + (int) Math.round(L*Math.cos(theta));
 	}
 	
-	// method to compute the angular acceleration
-	// in the Euler-Richardson algorithm in the launch method
+	// method to compute the angular acceleration in the Euler-Richardson algorithm in the launch method
 	double torque(double theta, double omega, double t) {
-		return - Math.sin(theta) - damping*omega +
-			driveAmp*Math.sin(driveFreq*t);
+		return - Math.sin(theta) - damping*omega + driveAmp*Math.sin(driveFreq*t);
 	}
 	
 	// this method has to be written, as Pendulum implements Runnable
@@ -146,7 +136,9 @@ class Pendulum extends Canvas implements Runnable {
 			if (running) {
 
 				// update driveAmp from scrollbar:
-				driveAmp = s1.getValue()/s1div;
+				damping = dampingScroll.getValue();
+				driveAmp = driveAmpScroll.getValue();
+				driveFreq = driveFreqScroll.getValue();
 				
 				// do 0.1/dt iterations before painting
 				for (int i = 0; i < 0.1/dt; i++) {
@@ -181,12 +173,13 @@ class Pendulum extends Canvas implements Runnable {
 	
 	// PAINT METHOD
 	public void paint(Graphics g) {
+		// bob
 		g.setColor(Color.red);
-		g.fillOval(bobX(theta) - bobW/2, bobY(theta) - bobW/2, bobW,
-			bobW);
+		g.fillOval(bobX(theta) - bobW/2, bobY(theta) - bobW/2, bobW, bobW);
+		// pivot
 		g.setColor(Color.black);
-		g.fillOval(pivotX - pivotW/2, pivotY - pivotW/2, pivotW,
-			pivotW);
+		g.fillOval(pivotX - pivotW/2, pivotY - pivotW/2, pivotW, pivotW);
+		// rod
 		g.drawLine(pivotX, pivotY, bobX(theta), bobY(theta));
 		
 		// to avoid animation stuttering:
@@ -202,9 +195,8 @@ class Pendulum extends Canvas implements Runnable {
 		
 		new Pendulum();
 		
-		// the calculations of the pendulum (and its infinite loop)
-		// are run in a separate thread (myThread), so any code below
-		// these lines will also be executed:
+		// the calculations of the pendulum (and its infinite loop) are run in a separate thread (myThread), so any
+		// code below these lines will also be executed:
 		
 		System.out.println("Hello, world!");
 		
